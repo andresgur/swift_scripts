@@ -1,0 +1,14 @@
+read events %1%
+.
+filter grade 0-12
+extract image
+save image
+image.fits
+filter region swift_source.reg
+extract spectrum
+save spectrum
+source_spectrum.fits
+clear region
+filter region swift_back.reg
+save spectrum
+background2_spectrum.fits

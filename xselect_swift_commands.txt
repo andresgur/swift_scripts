@@ -1,0 +1,38 @@
+# Swift XRT commands
+read events file
+filter grade 0-12
+extract image
+save image
+ds9 image
+save source and back regions
+# source spectrum
+filter region swift_source.reg
+extract spectrum
+save spectrum
+# spectrum name
+clear region
+# for the background repeat
+extract curve
+# out of xselect
+xrtmkarf
+# give exposure map
+ 
+# add exposure maps
+ximage
+read image1
+read image2
+sum # adds them together
+save # save in memory
+# redo the sum with another one and the one in memory
+#write fits at the end
+# TODO: check if for ximage we can load many fits files at the same time
+write/fits 
+# stack lightcurves to see gaps in the data segments
+# energy range
+#0.3 - 10
+
+# Fit XMM data with a model
+# Fake data with this model with XRT ARF and background (generated with a region)
+# With Nustar do the same thing, check if there is a background file in for FMPA files and use the response 
+# then check for a certain exposure time whether you can disentangle from a powerlaw and a cutoffpl
+

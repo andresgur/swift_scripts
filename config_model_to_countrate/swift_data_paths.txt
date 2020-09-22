@@ -1,0 +1,5 @@
+# rmf path; arf path; swift spectrum (any just so xspec does not complain
+swxpc0to12s6_20130101v014.rmf
+swxs6_20010101v001.arf
+/home/agurpide/x_ray_data/holmbergIIX1/swift_data/spectra/low/grouped_opt.fits
+/home/agurpide/x_ray_data/holmbergIIX1/swift_data/spectra/low/interval0pcback.pi
