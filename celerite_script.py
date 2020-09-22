@@ -12,6 +12,7 @@ import readingutils as ru
 from celerite import terms
 from scipy.optimize import minimize
 from shutil import copyfile
+from scipy import stats
 import corner
 import emcee
 
@@ -61,6 +62,9 @@ args = ap.parse_args()
 fit = False if args.fit == 0 else True
 
 days_to_seconds = 24 * 3600
+
+if not os.path.isdir(args.outdir):
+    os.mkdir(args.outdir)
 
 plt.style.use('/home/agurpide/.config/matplotlib/stylelib/paper.mplstyle')
 
@@ -136,13 +140,16 @@ sampler.run_mcmc(initial_samples, nsamples, progress=True)
 acceptance_ratio = sampler.acceptance_fraction
 print("Acceptance ratio: (%)")
 print(acceptance_ratio)
-tau = sampler.get_autocorr_time()
-print("Correlation parameters:")
-print(tau)
+try:
+    tau = sampler.get_autocorr_time()
+    print("Correlation parameters:")
+    print(tau)
+except emcee.autocorr.AutocorrError:
+    print("Failed to compute autocorrelation function, too few samples.")
 # plot the entire chain
 chain = sampler.get_chain(flat=True)
 chain_fig, axes = plt.subplots(3, sharex=True, gridspec_kw={'hspace': 0, 'wspace': 0})
-means = np.mean(chain, axis=0)
+means = np.median(chain, axis=0)
 for param, parname, ax, mean in zip(chain.T, par_names, axes, means):
     ax.plot(param, linestyle="None", marker="+", color="black")
     ax.set_ylabel(parname)
@@ -157,14 +164,18 @@ chain_fig.savefig("%s/chain_samples.png" % args.outdir)
 cols = ["log_omega0", "log_S0", "log_Q"]
 inds = [par_names.index("kernel:%s" % c) for c in cols]
 samples = final_samples[:, inds]
-samples[:, :-1] = np.exp(samples[:, :-1])
-2 * np.pi / (np.exp(gp.get_parameter_dict()["kernel:log_omega0"]) * days_to_seconds)
-ind_omega = par_names.index("kernel:%s" % "log_omega0")
+samples[:, :] = np.exp(samples[:, :])
+# ind_omega = par_names.index("kernel:%s" % "log_omega0")
 samples[:, 0] = 2 * np.pi / (samples[:, 0] * days_to_seconds)
-medians = np.median(samples, axis=0)
+medians = np.mode(samples, axis=0)
+out_file = open("%s/parameter_medians.dat" % (args.outdir), "w+")
+out_file.write("#period\tS_0\tQ_0\n")
+out_file.write("%.2f\t%.2f\t%.2f" % (medians[0], medians[1], medians[2]))
+out_file.close()
 ranges = [(median - 0.9 * median, median + 0.9 * median) for median in medians]
-corner_fig = corner.corner(samples, smooth=0.5, range=ranges, labels=[r"$P$ (days)", r"$S_0$", r"Q"], truths=medians)
+corner_fig = corner.corner(samples, smooth=0.3, range=ranges, labels=[r"$P$ (days)", r"$S_0$", r"Q"], truths=medians)
 corner_fig.savefig("%s/corner_fig.png" % args.outdir)
+plt.show()
 
 # finally plot final PSD and Model
 # MODEL
@@ -195,6 +206,7 @@ for index, sample in enumerate(final_samples[np.random.randint(len(samples), siz
     psd_ax.plot(frequencies * days_to_seconds / 2 / np.pi, psd, color=color, alpha=0.3)
     models[index] = model
     psds[index] = psd
+psd_ax.set_ylim(bottom=0)
 model_figure.savefig("%s/model_fit_celerite_samples.png" % args.outdir)
 psd_figure.savefig("%s/psd_samples.png" % args.outdir)
 # Median and standard deviation figures
@@ -215,7 +227,8 @@ model_ax.errorbar(time / days_to_seconds, y, yerr=yerr, fmt=".k", capsize=0)
 psd_ax.plot(frequencies * days_to_seconds / 2 / np.pi, p[1], color=color)
 psd_ax.fill_between(frequencies * days_to_seconds / 2 / np.pi, p[0], p[2], color=color, alpha=0.3)
 model_figure.savefig("%s/model_fit_median.png" % args.outdir)
+psd_ax.set_ylim(bottom=0)
 psd_figure.savefig("%s/psd_median.png" % args.outdir)
 config_file_name = os.path.basename(args.config_file)
-copyfile(args.config_file, "%s/%s/" % (args.outdir, config_file_name))
+copyfile(args.config_file, "%s/%s" % (args.outdir, config_file_name))
 print("Results stored to %s" % args.outdir)

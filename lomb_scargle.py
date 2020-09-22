@@ -109,7 +109,7 @@ args = ap.parse_args()
 
 count_rate_file = "PCCURVE.qdp"
 #input_file = "PCHR.qdp"
-plt.style.use('/home/agurpide/.config/matplotlib/stylelib/paper.mplstyle')
+plt.style.use('/home/agurpide/.config/matplotlib/stylelib/email.mplstyle')
 f = open("t0.date")
 lines = f.readlines()
 f.close()
@@ -190,7 +190,7 @@ if os.path.isfile(count_rate_file):
         power_max_prob = ls.false_alarm_probability(power.max(), minimum_frequency=minimum_frequency, maximum_frequency=maximum_frequency, method="bootstrap", samples_per_peak=samples_per_peak, method_kwds={"n_bootstraps": 1000})
         print("False alarm probability of maximum power %.2f" % ((1 - power_max_prob) * 100))
         print("Period candidates:")
-        power_candidates, properties = find_peaks(power, height=power_prob[0].value)
+        power_candidates, properties = find_peaks(power, height=power_prob[0].value * 0.9)
         period_candidates = 1 / frequency[power_candidates] / 3600 / 24
         [print("%.2f" % period) for period in period_candidates]
         print("\n")
