@@ -110,6 +110,7 @@ args = ap.parse_args()
 count_rate_file = "PCCURVE.qdp"
 #input_file = "PCHR.qdp"
 plt.style.use('/home/agurpide/.config/matplotlib/stylelib/email.mplstyle')
+
 f = open("t0.date")
 lines = f.readlines()
 f.close()
@@ -142,12 +143,16 @@ if os.path.isfile(count_rate_file):
     sampling = np.array([(b - a) / 3600 / 24 for a, b in zip(data["Time"], data["Time"][1:])])
     print("Median sampling %.1f days" % (np.median(sampling)))
     maximum_frequency = (args.fmax) / 3600 / 24
-    minimum_frequency = 2 / (T_obs) if args.fmin == -1 else (args.fmin) / 3600 / 24
+    minimum_frequency = 1 / (T_obs) if args.fmin == -1 else (args.fmin) / 3600 / 24
     period_range = "%.1f-%.1f" % ((1 / (maximum_frequency * 3600 * 24)), (1 / (minimum_frequency * 3600 * 24)))
     print("Period range explored: %s (days)" % period_range)
     outdir = "%s%s" % (args.outdir, period_range)
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
+    # save time range used
+    time_range_file = open("%s/time_range.txt" % (outdir), "w+")
+    time_range_file.write("%.5f-%.5f" % (data["Time"][0], data["Time"][-1]))
+    time_range_file.close()
     # signal transform
     ls = LombScargle(data["Time"], data["%s" % rate], dy=errors, fit_mean=True, nterms=nterms, center_data=False)
     # window transform, do not precenter or fit mean substitute values by ones

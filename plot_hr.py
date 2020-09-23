@@ -2,7 +2,7 @@
 # @Date:   27-08-2020
 # @Email:  agurpidelash@irap.omp.eu
 # @Last modified by:   agurpide
-# @Last modified time: 18-09-2020
+# @Last modified time: 23-09-2020
 
 
 
@@ -143,8 +143,9 @@ if os.path.isfile(count_rate_file) and os.path.isfile(hr_file):
 
     data_count_rate = ru.readPCCURVE(count_rate_file)
     data_hr = ru.readPCHR(hr_file)
-    data_count_rate = np.array([row for row in data_count_rate if row["Time"] >= args.tmin and row["Time"] <= args.tmax])
-    data_hr = np.array([row for row in data_hr if row["Time"] >= args.tmin and row["Time"] <= args.tmax])
+    data_count_rate = data_count_rate[(data_count_rate["Time"] >= args.tmin) & (data_count_rate["Time"] <= args.tmax)]
+    data_count_rate = ru.filter_data(data_count_rate, 0, 0, 10)
+    data_hr = data_hr[(data_hr["Time"] >= args.tmin) & (data_hr["Time"] <= args.tmax)]
     print("Found %d swift observations in %s" % (len(data_count_rate), count_rate_file))
     print("Found %d swift observations in %s" % (len(data_hr), hr_file))
     sampling = np.array([(b - a) / 3600 / 24 for a, b in zip(data_count_rate["Time"], data_count_rate["Time"][1:])])
@@ -200,7 +201,7 @@ if os.path.isfile(count_rate_file) and os.path.isfile(hr_file):
                                  ls="None", marker="+", color=colors[chunk])
                 time_hr_ax.errorbar(data_count_rate["Time"][j:i + 1] / 3600 / 24, data_hr["HR"][j:i + 1],
                                     xerr=[-data_count_rate["T_ve_1"][j:i + 1] / 3600 / 24, data_count_rate["T_ve"][j:i + 1] / 3600 / 24],
-                                    yerr=[-data_count_rate["Rateneg"][j:i + 1], data_count_rate["Ratepos"][j:i + 1]],
+                                    yerr=data_hr["HRerr"][j:i + 1],
                                     ls="None", marker="+", color=colors[chunk])
                 lightcurve_ax.errorbar(data_count_rate["Time"][j:i + 1] / 3600 / 24, data_count_rate["Rate"][j:i + 1],
                                        yerr=[-data_count_rate["Rateneg"][j:i + 1], data_count_rate["Ratepos"][j:i + 1]],
@@ -212,15 +213,16 @@ if os.path.isfile(count_rate_file) and os.path.isfile(hr_file):
                                            xerr=[-data_count_rate["T_ve_1"][j:i + 1] / 3600 / 24, data_count_rate["T_ve"][j:i + 1] / 3600 / 24],
                                            ls="None", marker=".", color=colors[chunk])
                 hr_double_panel.errorbar(data_hr["HR"][j:i + 1], data_count_rate["Rate"][j:i + 1], xerr=data_hr["HRerr"][j:i + 1],
-                                          ls="None", marker=".", errorevery=hr_error_every, label=" %.1f d (%d) %s" % (float(data_count_rate["Time"][i] - data_count_rate["Time"][j]) / 3600 / 24, accumulated_datapoints,
-                                          time_todate(swift_zero_point.mjd + float(data_count_rate["Time"][j]) / 3600 / 24).value),
-                                          color=colors[chunk])
+                                         ls="None", marker=".", errorevery=hr_error_every, label=" %.1f d (%d) %s" % (float(data_count_rate["Time"][i] - data_count_rate["Time"][j]) / 3600 / 24, accumulated_datapoints,
+                                         time_todate(swift_zero_point.mjd + float(data_count_rate["Time"][j]) / 3600 / 24).value),
+                                         color=colors[chunk])
                 draw_arrows(data_hr["HR"][j:i + 1], data_count_rate["Rate"][j:i + 1], color=colors[chunk], ax=hr_double_panel)
                 i += 1
                 j = i
                 chunk += 1
             hr_ax.legend()
             hr_double_panel.legend()
+
     else:
         hr_ax.errorbar(data_hr["HR"], data_count_rate["Rate"], xerr=data_hr["HRerr"], yerr=[-data_count_rate["Rateneg"], data_count_rate["Ratepos"]],
                        ls="None", fmt="-", color="black", marker="+", errorevery=hr_error_every)
@@ -232,13 +234,13 @@ if os.path.isfile(count_rate_file) and os.path.isfile(hr_file):
         time_double_panel.errorbar(data_hr["Time"] / 3600 / 24, data_count_rate["Rate"], xerr=[-data_count_rate["T_ve_1"] / 3600 / 24, data_count_rate["T_ve"] / 3600 / 24], yerr=[-data_count_rate["Rateneg"],
                                    data_count_rate["Ratepos"]], ls="None", fmt="-", color="black", marker="+")
         hr_double_panel.errorbar(data_hr["HR"], data_count_rate["Rate"], xerr=data_hr["HRerr"],
-                                  ls="None", fmt="-", color="black", marker=".", errorevery=hr_error_every)
+                                 ls="None", fmt="-", color="black", marker=".", errorevery=hr_error_every)
 
     hr_ax.set_title(args.source)
     time_figure.suptitle(args.source)
     lightcurve_ax.set_title(args.source)
     double_panel_figure.suptitle(args.source)
-
+    plt.show()
     if args.input_observation_file != "":
         pu.plot_obs_file(args.input_observation_file, swift_zero_point, time_ax)
         pu.plot_obs_file(args.input_observation_file, swift_zero_point, time_hr_ax)

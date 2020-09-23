@@ -66,12 +66,16 @@ days_to_seconds = 24 * 3600
 if not os.path.isdir(args.outdir):
     os.mkdir(args.outdir)
 
-plt.style.use('/home/agurpide/.config/matplotlib/stylelib/paper.mplstyle')
+plt.style.use('/home/agurpide/.config/matplotlib/stylelib/email.mplstyle')
 
 count_rate_file = "PCCURVE.qdp"
 data = ru.readPCCURVE("%s" % count_rate_file)
 # filter data according to input parameters
 data = np.array([row for row in data if row["Time"] >= args.tmin and row["Time"] <= args.tmax and row["Rate"] < args.maxcountrate])
+time_range_file = open("%s/time_range.txt" % (args.outdir), "w+")
+time_range_file.write("%.5f-%.5f" % (data["Time"][0], data["Time"][-1]))
+time_range_file.close()
+
 f = open("t0.date")
 lines = f.readlines()
 f.close()
@@ -134,7 +138,7 @@ nwalkers = 20
 initial_samples = gp.get_parameter_vector() + 1e-5 * np.random.randn(nwalkers, ndim)
 sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability, args=(y, gp))
 # burn in phase
-nsamples = 5000
+nsamples = 5500
 print("Simulating %s samples" % nsamples)
 sampler.run_mcmc(initial_samples, nsamples, progress=True)
 acceptance_ratio = sampler.acceptance_fraction
@@ -149,15 +153,16 @@ except emcee.autocorr.AutocorrError:
 # plot the entire chain
 chain = sampler.get_chain(flat=True)
 chain_fig, axes = plt.subplots(3, sharex=True, gridspec_kw={'hspace': 0, 'wspace': 0})
-means = np.median(chain, axis=0)
-for param, parname, ax, mean in zip(chain.T, par_names, axes, means):
+medians = np.median(chain, axis=0)
+for param, parname, ax, median in zip(chain.T, par_names, axes, medians):
     ax.plot(param, linestyle="None", marker="+", color="black")
     ax.set_ylabel(parname)
-    ax.axhline(y=mean)
+    ax.axhline(y=median)
 # discard 1000 samples (found empirically) and plot
 discard = 1000
-for chain, parname, ax, mean in zip(chain.T, par_names, axes, means):
+for ax in axes:
     ax.axvline(discard * nwalkers, ls="--", color="red")
+
 final_samples = sampler.get_chain(discard=discard, thin=20, flat=True)
 chain_fig.savefig("%s/chain_samples.png" % args.outdir)
 
@@ -167,15 +172,17 @@ samples = final_samples[:, inds]
 samples[:, :] = np.exp(samples[:, :])
 # ind_omega = par_names.index("kernel:%s" % "log_omega0")
 samples[:, 0] = 2 * np.pi / (samples[:, 0] * days_to_seconds)
-medians = np.mode(samples, axis=0)
+medians = np.median(samples, axis=0)
 out_file = open("%s/parameter_medians.dat" % (args.outdir), "w+")
 out_file.write("#period\tS_0\tQ_0\n")
 out_file.write("%.2f\t%.2f\t%.2f" % (medians[0], medians[1], medians[2]))
 out_file.close()
 ranges = [(median - 0.9 * median, median + 0.9 * median) for median in medians]
-corner_fig = corner.corner(samples, smooth=0.3, range=ranges, labels=[r"$P$ (days)", r"$S_0$", r"Q"], truths=medians)
+corner_fig = plt.figure()
+corner_fig = corner.corner(samples, smooth=0.5, range=ranges, labels=[r"$P$ (days)", r"$S_0$", r"Q"],
+                           quantiles=[0.16, 0.5, 0.84], show_titles=True, fig=corner_fig)
 corner_fig.savefig("%s/corner_fig.png" % args.outdir)
-plt.show()
+#plt.show()
 
 # finally plot final PSD and Model
 # MODEL

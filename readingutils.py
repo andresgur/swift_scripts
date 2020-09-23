@@ -2,7 +2,7 @@
 # @Date:   02-09-2020
 # @Email:  agurpidelash@irap.omp.eu
 # @Last modified by:   agurpide
-# @Last modified time: 16-09-2020
+# @Last modified time: 23-09-2020
 
 
 
@@ -92,6 +92,26 @@ def filter_hr(data_hr, minSoftSig=0, minHardSig=0, reject_errors=True):
     else:
         return np.array([row_data for row_data in data_hr if row_data["HR"] > 0 and not
                         np.isnan(row_data["HR"]) and row_data["SoftSig"] > minSoftSig and row_data["HardSig"] > minHardSig])
+
+
+def filter_data(data, minExposure=0, minSigma=0, minSNR=0):
+    """Filters hardness ratio data from Swift data.
+        Filtering is done based on minimum soft and hard detection.
+        A flag to remove errors higher than the data point value can be given.
+        Data points with negative HR are also filtered. Nan values are also removed.
+
+        Parameters
+        ----------
+        data: ndarray
+            The data PCCURVE.qdp
+        minExposure : float, optional
+            Minimum exposure to consider
+        minSigma : float, optional
+            Minimum Sigma to consider.
+        minSNR: float, optional
+            Minimum SNR to consider.
+        """
+    return data[(data["Exposure"] > minExposure) & (data["SNR"] > minSNR) & (data["Sigma"] > minSigma)]
 
 
 def readPCCURVE(file="PCCURVE.qdp"):
